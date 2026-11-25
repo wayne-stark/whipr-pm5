@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#090d16" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>Whipr PM5 — Rower & SUP</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --panel: #111827;
+      --panel-2: #172033;
+      --border: #24324d;
+      --accent: #38bdf8;
+      --accent-sup: #2dd4bf;
+      --green: #22c55e;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+      gap: 10px;
+    }
+
+    /* Top bar */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 10px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand {
+      font-weight: 900;
+      letter-spacing: 0.8px;
+      font-size: 1rem;
+      color: var(--accent);
+    }
+
+    .brand span {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* Compact FF-style pixel sprite box */
+    .sprite-frame {
+      width: 68px;
+      height: 34px;
+      border-radius: 6px;
+      background: #071324;
+      border: 1px solid #2b3d5c;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    canvas#pixelSprite {
+      width: 64px;
+      height: 32px;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--red);
+    }
+
+    .dot.active {
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+    }
+
+    /* Discipline & Workout controls */
+    .toolbar {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr auto;
+      gap: 8px;
+    }
+
+    .seg-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 3px;
+    }
+
+    .seg-btn {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-weight: 800;
+      font-size: 0.78rem;
+      letter-spacing: 0.5px;
+      border-radius: 7px;
+      cursor: pointer;
+      padding: 7px 6px;
+    }
+
+    .seg-btn.active.rower {
+      background: var(--accent);
+      color: #06101d;
+    }
+
+    .seg-btn.active.sup {
+      background: var(--accent-sup);
+      color: #041815;
+    }
+
+    select, input[type="number"] {
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      outline: none;
+    }
+
+    .btn-sim {
+      background: var(--panel-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0 12px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-sim.running {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: var(--red);
+      color: #fca5a5;
+    }
+
+    /* SUP calibration strip (only visible in SUP mode) */
+    .sup-bar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 7px 12px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .sup-bar.visible {
+      display: flex;
+    }
+
+    .sup-bar input[type="range"] {
+      flex: 1;
+      accent-color: var(--accent-sup);
+    }
+
+    /* Interval banner */
+    .interval-banner {
+      display: none;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(245, 158, 11, 0.14);
+      border: 1px solid rgba(245, 158, 11, 0.45);
+      color: #fde68a;
+      border-radius: 10px;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .interval-banner.visible {
+      display: flex;
+    }
+
+    /* Concept2 PM5 Telemetry Grid */
+    .pm5-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1.35fr 1fr 1fr;
+      gap: 8px;
+      flex: 1;
+      min-height: 320px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .card.hero {
+      grid-column: span 2;
+      background: linear-gradient(180deg, #152036 0%, #0e1524 100%);
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1.1px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .hero .value {
+      font-size: clamp(3rem, 12vw, 4.4rem);
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.05;
+      margin: 4px 0;
+    }
+
+    .value {
+      font-size: clamp(1.7rem, 7vw, 2.3rem);
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.1;
+    }
+
+    .sub {
+      font-size: 0.76rem;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    body.sup-theme .sub {
+      color: var(--accent-sup);
+    }
+
+    /* Bottom controls */
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      grid-column: span 2;
+      background: var(--accent);
+      color: #06101d;
+      border: none;
+      border-radius: 12px;
+      padding: 13px;
+      font-size: 0.95rem;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    body.sup-theme .btn-primary {
+      background: var(--accent-sup);
+      color: #041815;
+    }
+
+    .btn-sec {
+      background: var(--panel-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-reset {
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      border-radius: 10px;
+      padding: 11px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand-group">
+      <div class="brand">WHIPR <span>PM5</span></div>
+      <div class="sprite-frame" title="Live Activity Sprite">
+        <canvas id="pixelSprite" width="32" height="16"></canvas>
+      </div>
+    </div>
+    <div class="status-pill">
+      <span class="dot" id="statusDot"></span>
+      <span id="statusText">Disconnected</span>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="seg-toggle">
+      <button class="seg-btn rower active" id="btnModeRower" onclick="setDiscipline('rower')">ROWER</button>
+      <button class="seg-btn sup" id="btnModeSup" onclick="setDiscipline('sup')">SUP</button>
+    </div>
+
+    <select id="workoutSelect" onchange="resetSession()">
+      <option value="just_row">Just Go (Open)</option>
+      <option value="2000m">2,000 m Target</option>
+      <option value="5000m">5,000 m Target</option>
+      <option value="20min">20:00 Time Target</option>
+      <option value="int_8x500">8x 500m / 1:00 Rest</option>
+      <option value="int_6x3m">6x 3:00 Work / 1:00 Rest</option>
+    </select>
+
+    <button class="btn-sim" id="simBtn" onclick="toggleSim()">Sim</button>
+  </div>
+
+  <div class="sup-bar" id="supBar">
+    <span>Board Glide (k): <strong id="kVal">0.48</strong></span>
+    <input type="range" id="kSlider" min="0.35" max="0.62" step="0.01" value="0.48" oninput="updateGlideFactor(this.value)" />
+    <span id="supSpeedLabel">0.0 km/h</span>
+  </div>
+
+  <div class="interval-banner" id="intervalBanner">
+    <span id="intervalLabel">INTERVAL 1/8 — WORK</span>
+    <span id="intervalRem">0:00</span>
+  </div>
+
+  <main class="pm5-grid">
+    <div class="card hero">
+      <div class="label" id="paceLabel">Pace (/500m)</div>
+      <div class="value" id="paceVal">0:00.0</div>
+      <div class="sub" id="avgPaceSub">Avg: 0:00.0</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Time</div>
+      <div class="value" id="timeVal">00:00</div>
+      <div class="sub" id="timeSub">Elapsed</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Distance</div>
+      <div class="value" id="distVal">0</div>
+      <div class="sub" id="distSub">meters</div>
+    </div>
+
+    <div class="card">
+      <div class="label" id="spmLabel">Stroke Rate</div>
+      <div class="value" id="spmVal">0</div>
+      <div class="sub">s/m</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Power / Cal</div>
+      <div class="value" id="wattsVal">0 <span style="font-size:0.95rem;color:var(--muted);">W</span></div>
+      <div class="sub"><span id="calVal">0</span> kcal</div>
+    </div>
+  </main>
+
+  <div class="actions">
+    <button class="btn-primary" id="connectBtn" onclick="connectBLE()">Connect Whipr (Bluetooth)</button>
+    <button class="btn-sec" onclick="exportCSV()">Export CSV</button>
+    <button class="btn-reset" onclick="resetSession()">Reset</button>
+  </div>
+
+  <script>
+    // Bluetooth FTMS UUIDs
+    const FTMS_SERVICE = 0x1826;
+    const ROWER_DATA_CHAR = 0x2AD1;
+
+    let discipline = 'rower'; // 'rower' | 'sup'
+    let glideFactor = 0.48;   // Concept2-style cubic glide constant for SUP
+    let bleDevice = null;
+    let isSim = false;
+    let tickTimer = null;
+    let simTimer = null;
+    let wakeLock = null;
+
+    let state = {
+      running: false,
+      elapsedSec: 0,
+      distanceM: 0,
+      spm: 0,
+      paceSecPer500m: 0,
+      watts: 0,
+      calories: 0,
+      intervalIndex: 0,
+      inRest: false,
+      segmentElapsed: 0,
+      logs: []
+    };
+
+    // --- FINAL FANTASY-STYLE PIXEL ART SPRITE (32x16 logical pixels) ---
+    const canvas = document.getElementById('pixelSprite');
+    const ctx = canvas.getContext('2d');
+    let animPhase = 0;
+
+    function drawPixelSprite() {
+      ctx.clearRect(0, 0, 32, 16);
+
+      // Subtle water line
+      const waveShift = Math.floor(animPhase) % 2;
+      ctx.fillStyle = '#1d4ed8';
+      for (let x = 0; x < 32; x += 4) {
+        ctx.fillRect((x + waveShift) % 32, 13, 2, 1);
+      }
+      ctx.fillStyle = '#38bdf8';
+      for (let x = 2; x < 32; x += 6) {
+        ctx.fillRect((x + waveShift) % 32, 14, 2, 1);
+      }
+
+      const strokePhase = state.running ? Math.sin(animPhase * Math.PI) : 0;
+      const lean = Math.round(strokePhase * 2); // -2 (catch) to +2 (finish)
+
+      if (discipline === 'rower') {
+        // Scull/rower hull
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(4, 11, 22, 2);
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(24, 10, 4, 2);
+
+        // Rower torso + FF-style hero headband/hair
+        const headX = 14 + lean;
+        const headY = 4;
+        ctx.fillStyle = '#fbbf24'; // blond/gold hair
+        ctx.fillRect(headX, headY, 4, 2);
+        ctx.fillStyle = '#fde68a'; // face
+        ctx.fillRect(headX, headY + 2, 4, 2);
+        ctx.fillStyle = '#ef4444'; // red headband
+        ctx.fillRect(headX, headY + 1, 4, 1);
+
+        // Tunic / body
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(13 + lean, 8, 5, 3);
+
+        // Oar & arm movement
+        const oarTipX = 8 + Math.round(strokePhase * 5);
+        ctx.fillStyle = '#f59e0b';
+        ctx.fillRect(oarTipX, 9, 8, 1);
+        ctx.fillRect(oarTipX - 1, 10, 2, 4);
+      } else {
+        // SUP board
+        ctx.fillStyle = '#2dd4bf';
+        ctx.fillRect(5, 11, 22, 2);
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(8, 11, 16, 1);
+
+        // Stand-up paddler
+        const sway = Math.round(strokePhase);
+        ctx.fillStyle = '#c084fc'; // mage/adventurer hood/hair
+        ctx.fillRect(14 + sway, 2, 4, 2);
+        ctx.fillStyle = '#fde68a';
+        ctx.fillRect(14 + sway, 4, 4, 2);
+        ctx.fillStyle = '#6366f1'; // tunic
+        ctx.fillRect(14 + sway, 6, 4, 5);
+
+        // Paddle shaft & blade
+        const bladeX = 18 + Math.round(strokePhase * 4);
+        ctx.fillStyle = '#f59e0b';
+        ctx.fillRect(15 + sway, 7, 4, 1);
+        ctx.fillRect(bladeX, 5, 1, 9);
+        ctx.fillStyle = '#fde047';
+        ctx.fillRect(bladeX - 1, 11, 3, 3);
+      }
+    }
+
+    setInterval(() => {
+      if (state.running) animPhase += 0.25;
+      drawPixelSprite();
+    }, 120);
+
+    // --- CONCEPT2 & SUP PHYSICS ---
+    function wattsFromPace500(paceSec) {
+      if (!paceSec || paceSec <= 0) return 0;
+      return Math.round(2.80 / Math.pow(paceSec / 500, 3));
+    }
+
+    function supMetricsFromWatts(watts) {
+      if (!watts || watts <= 0) {
+        return { speedKmh: 0, paceSecPerKm: 0, paceSecPer500m: 0 };
+      }
+      const vMps = glideFactor * Math.cbrt(watts);
+      const speedKmh = vMps * 3.6;
+      const paceSecPerKm = vMps > 0 ? 1000 / vMps : 0;
+      return {
+        speedKmh: Number(speedKmh.toFixed(1)),
+        paceSecPerKm: Math.round(paceSecPerKm),
+        paceSecPer500m: Math.round(paceSecPerKm / 2)
+      };
+    }
+
+    function updateGlideFactor(val) {
+      glideFactor = parseFloat(val);
+      document.getElementById('kVal').innerText = glideFactor.toFixed(2);
+      updateUI();
+    }
+
+    function setDiscipline(mode) {
+      discipline = mode;
+      document.body.classList.toggle('sup-theme', mode === 'sup');
+      document.getElementById('btnModeRower').classList.toggle('active', mode === 'rower');
+      document.getElementById('btnModeSup').classList.toggle('active', mode === 'sup');
+      document.getElementById('supBar').classList.toggle('visible', mode === 'sup');
+      document.getElementById('paceLabel').innerText = mode === 'sup' ? 'Pace (/km)' : 'Pace (/500m)';
+      document.getElementById('spmLabel').innerText = mode === 'sup' ? 'Paddle Rate' : 'Stroke Rate';
+      updateUI();
+    }
+
+    // --- WAKE LOCK & BLUETOOTH ---
+    async function keepScreenAwake() {
+      try {
+        if ('wakeLock' in navigator && !wakeLock) {
+          wakeLock = await navigator.wakeLock.request('screen');
+        }
+      } catch (_) {}
+    }
+
+    async function connectBLE() {
+      if (!navigator.bluetooth) {
+        alert('Web Bluetooth requires HTTPS or localhost in Chrome on Android.');
+        return;
+      }
+      try {
+        setStatus('Scanning...', false);
+        bleDevice = await navigator.bluetooth.requestDevice({
+          filters: [{ services: [FTMS_SERVICE] }],
+          optionalServices: [FTMS_SERVICE]
+        });
+        bleDevice.addEventListener('gattserverdisconnected', () => {
+          setStatus('Disconnected', false);
+          document.getElementById('connectBtn').innerText = 'Reconnect Whipr (Bluetooth)';
+          stopSession();
+        });
+
+        const server = await bleDevice.gatt.connect();
+        const service = await server.getPrimaryService(FTMS_SERVICE);
+        const char = await service.getCharacteristic(ROWER_DATA_CHAR);
+        await char.startNotifications();
+        char.addEventListener('characteristicvaluechanged', onRowerData);
+
+        setStatus(bleDevice.name || 'Whipr Connected', true);
+        document.getElementById('connectBtn').innerText = 'Connected: ' + (bleDevice.name || 'Whipr');
+        await keepScreenAwake();
+        startSession();
+      } catch (err) {
+        console.error(err);
+        setStatus('Disconnected', false);
+      }
+    }
+
+    function onRowerData(event) {
+      const dv = event.target.value;
+      const flags = dv.getUint16(0, true);
+      let offset = 2;
+
+      if ((flags & 0x01) === 0) {
+        state.spm = Math.round(dv.getUint8(offset) * 0.5);
+        offset += 3; // rate (1B) + count (2B)
+      }
+      if (flags & 0x02) offset += 1;
+      if (flags & 0x04) {
+        state.distanceM = dv.getUint8(offset) + (dv.getUint8(offset + 1) << 8) + (dv.getUint8(offset + 2) << 16);
+        offset += 3;
+      }
+      if (flags & 0x08) {
+        state.paceSecPer500m = dv.getUint16(offset, true);
+        offset += 2;
+      }
+      if (flags & 0x10) offset += 2;
+      if (flags & 0x20) {
+        state.watts = dv.getInt16(offset, true);
+        offset += 2;
+      }
+      if (state.watts <= 0 && state.paceSecPer500m > 0) {
+        state.watts = wattsFromPace500(state.paceSecPer500m);
+      }
+      updateUI();
+    }
+
+    // --- SESSION TIMER & SIMULATION ---
+    function startSession() {
+      if (state.running) return;
+      state.running = true;
+      tickTimer = setInterval(() => {
+        state.elapsedSec += 1;
+        state.segmentElapsed += 1;
+        handleIntervals();
+        state.logs.push({
+          t: state.elapsedSec,
+          mode: discipline,
+          dist: Math.round(state.distanceM),
+          pace500: state.paceSecPer500m,
+          spm: state.spm,
+          watts: state.watts,
+          cal: state.calories
+        });
+        updateUI();
+      }, 1000);
+    }
+
+    function stopSession() {
+      state.running = false;
+      clearInterval(tickTimer);
+      tickTimer = null;
+    }
+
+    function toggleSim() {
+      isSim = !isSim;
+      const btn = document.getElementById('simBtn');
+      if (isSim) {
+        btn.innerText = 'Stop';
+        btn.classList.add('running');
+        setStatus('Simulating', true);
+        keepScreenAwake();
+        startSession();
+        simTimer = setInterval(() => {
+          state.spm = discipline === 'sup' ? 32 + Math.floor(Math.random() * 5) : 24 + Math.floor(Math.random() * 5);
+          const pace500 = discipline === 'sup'
+            ? 145 + Math.floor(Math.random() * 12)
+            : 116 + Math.floor(Math.random() * 8);
+          state.paceSecPer500m = pace500;
+          state.watts = wattsFromPace500(pace500);
+          const mps = 500 / pace500;
+          state.distanceM += mps;
+          state.calories = Math.round((state.elapsedSec / 3600) * (state.watts * 4.2 + 280));
+          updateUI();
+        }, 1000);
+      } else {
+        btn.innerText = 'Sim';
+        btn.classList.remove('running');
+        clearInterval(simTimer);
+        stopSession();
+        setStatus('Disconnected', false);
+      }
+    }
+
+    function handleIntervals() {
+      const mode = document.getElementById('workoutSelect').value;
+      const banner = document.getElementById('intervalBanner');
+      if (mode === 'int_6x3m') {
+        banner.classList.add('visible');
+        const workSec = 180;
+        const restSec = 60;
+        const cap = state.inRest ? restSec : workSec;
+        if (state.segmentElapsed >= cap) {
+          state.segmentElapsed = 0;
+          if (state.inRest) {
+            state.inRest = false;
+            state.intervalIndex += 1;
+          } else {
+            state.inRest = true;
+          }
+        }
+        const rep = Math.min(6, state.intervalIndex + 1);
+        document.getElementById('intervalLabel').innerText =
+          `INTERVAL ${rep}/6 — ${state.inRest ? 'REST' : 'WORK'}`;
+        document.getElementById('intervalRem').innerText = formatClock(cap - state.segmentElapsed);
+      } else {
+        banner.classList.remove('visible');
+      }
+    }
+
+    // --- UI RENDERING ---
+    function updateUI() {
+      const mode = document.getElementById('workoutSelect').value;
+      const sup = supMetricsFromWatts(state.watts);
+
+      if (discipline === 'sup') {
+        document.getElementById('paceVal').innerText = formatPace(sup.paceSecPerKm);
+        const avgPaceKm = state.distanceM > 0 ? (state.elapsedSec / state.distanceM) * 1000 : 0;
+        document.getElementById('avgPaceSub').innerText = `Avg: ${formatPace(avgPaceKm)}/km • ${sup.speedKmh.toFixed(1)} km/h`;
+        document.getElementById('supSpeedLabel').innerText = `${sup.speedKmh.toFixed(1)} km/h`;
+      } else {
+        document.getElementById('paceVal').innerText = formatPace(state.paceSecPer500m);
+        const avgPace500 = state.distanceM > 0 ? (state.elapsedSec / state.distanceM) * 500 : 0;
+        document.getElementById('avgPaceSub').innerText = `Avg: ${formatPace(avgPace500)} /500m`;
+      }
+
+      if (mode === '20min') {
+        document.getElementById('timeVal').innerText = formatClock(Math.max(0, 1200 - state.elapsedSec));
+        document.getElementById('timeSub').innerText = 'Remaining';
+      } else {
+        document.getElementById('timeVal').innerText = formatClock(state.elapsedSec);
+        document.getElementById('timeSub').innerText = 'Elapsed';
+      }
+
+      if (mode === '2000m' || mode === '5000m') {
+        const target = mode === '2000m' ? 2000 : 5000;
+        document.getElementById('distVal').innerText = Math.max(0, Math.round(target - state.distanceM));
+        document.getElementById('distSub').innerText = 'm remaining';
+      } else {
+        document.getElementById('distVal').innerText = Math.round(state.distanceM);
+        document.getElementById('distSub').innerText = 'meters';
+      }
+
+      document.getElementById('spmVal').innerText = state.spm;
+      document.getElementById('wattsVal').innerHTML = `${state.watts} <span style="font-size:0.95rem;color:var(--muted);">W</span>`;
+      document.getElementById('calVal').innerText = state.calories;
+    }
+
+    function formatClock(sec) {
+      const s = Math.max(0, Math.floor(sec));
+      const m = Math.floor(s / 60);
+      const r = s % 60;
+      return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
+    }
+
+    function formatPace(sec) {
+      if (!sec || !isFinite(sec) || sec <= 0) return '0:00';
+      const m = Math.floor(sec / 60);
+      const r = Math.floor(sec % 60);
+      return `${m}:${String(r).padStart(2, '0')}`;
+    }
+
+    function setStatus(text, active) {
+      document.getElementById('statusText').innerText = text;
+      document.getElementById('statusDot').classList.toggle('active', active);
+    }
+
+    function resetSession() {
+      state.elapsedSec = 0;
+      state.distanceM = 0;
+      state.spm = 0;
+      state.paceSecPer500m = 0;
+      state.watts = 0;
+      state.calories = 0;
+      state.intervalIndex = 0;
+      state.inRest = false;
+      state.segmentElapsed = 0;
+      state.logs = [];
+      updateUI();
+    }
+
+    function exportCSV() {
+      if (!state.logs.length) {
+        alert('No workout data to export yet.');
+        return;
+      }
+      let csv = 'Time_s,Discipline,Distance_m,Pace500_s,SPM,Watts,Calories\n';
+      state.logs.forEach(r => {
+        csv += `${r.t},${r.mode},${r.dist},${r.pace500},${r.spm},${r.watts},${r.cal}\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `whipr_pm5_${discipline}_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Inline Service Worker for offline caching after first HTTPS load
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+      const swCode = `
+        const CACHE = 'whipr-pm5-v1';
+        self.addEventListener('install', e => {
+          e.waitUntil(caches.open(CACHE).then(c => c.addAll([location.href])));
+        });
+        self.addEventListener('fetch', e => {
+          e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+        });
+      `;
+      const blob = new Blob([swCode], { type: 'application/javascript' });
+      navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+    }
+
+    drawPixelSprite();
+    updateUI();
+  </script>
+</body>
+</html>
